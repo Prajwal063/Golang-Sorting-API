@@ -2,7 +2,9 @@ package main
 
 import (
 	"encoding/json"
+	"log"
 	"net/http"
+	"os"
 	"sort"
 	"sync"
 	"time"
@@ -25,12 +27,17 @@ func main() {
 	mux.HandleFunc("/process-single", processSingle)
 	mux.HandleFunc("/process-concurrent", processConcurrent)
 
-	// Use cors.Default() for default settings (allow all origins, methods, and headers)
 	handler := cors.Default().Handler(mux)
 
-	// Start the server on port 8000
-	http.ListenAndServe(":8000", handler)
+	port := os.Getenv("PORT")
+	if port == "" {
+		port = "8000"
+	}
+
+	log.Printf("Server listening on :%s...\n", port)
+	http.ListenAndServe(":"+port, handler)
 }
+
 func processSingle(w http.ResponseWriter, r *http.Request) {
 	var inputPayload InputPayload
 	if err := json.NewDecoder(r.Body).Decode(&inputPayload); err != nil {
