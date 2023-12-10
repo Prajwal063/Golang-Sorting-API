@@ -38,7 +38,7 @@ func main() {
 	http.ListenAndServe(":"+port, handler)
 }
 
-func processSingle(w http.ResponseWriter, r *http.Request) {
+func process(w http.ResponseWriter, r *http.Request, sortingFunc func([][]int) [][]int) {
 	var inputPayload InputPayload
 	if err := json.NewDecoder(r.Body).Decode(&inputPayload); err != nil {
 		http.Error(w, "Invalid JSON payload", http.StatusBadRequest)
@@ -51,7 +51,7 @@ func processSingle(w http.ResponseWriter, r *http.Request) {
 	}
 
 	startTime := time.Now()
-	sortedArrays := sequentialSort(inputPayload.ToSort)
+	sortedArrays := sortingFunc(inputPayload.ToSort)
 	timeTaken := time.Since(startTime).Nanoseconds()
 
 	response := ResponsePayload{
@@ -63,28 +63,11 @@ func processSingle(w http.ResponseWriter, r *http.Request) {
 }
 
 func processConcurrent(w http.ResponseWriter, r *http.Request) {
-	var inputPayload InputPayload
-	if err := json.NewDecoder(r.Body).Decode(&inputPayload); err != nil {
-		http.Error(w, "Invalid JSON payload", http.StatusBadRequest)
-		return
-	}
+	process(w, r, concurrentSort)
+}
 
-	if len(inputPayload.ToSort) == 0 {
-		http.Error(w, "Empty 'to_sort' array", http.StatusBadRequest)
-		return
-	}
-
-	startTime := time.Now()
-	sortedArrays := concurrentSort(inputPayload.ToSort)
-	t := time.Now()
-	timeTaken := t.Sub(startTime).Nanoseconds()
-
-	response := ResponsePayload{
-		SortedArrays: sortedArrays,
-		TimeNs:       timeTaken,
-	}
-
-	sendJSONResponse(w, response)
+func processSingle(w http.ResponseWriter, r *http.Request) {
+	process(w, r, sequentialSort)
 }
 
 func sequentialSort(toSort [][]int) [][]int {
